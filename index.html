@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>운동 체크 앱</title>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2a7bff">
+
+<!-- iOS 지원 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body { font-family:sans-serif; padding:15px; background:#f2f2f2; }
+    h2 { text-align:center; }
+
+    .container { background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.15); margin-bottom:15px; }
+
+    .save-btn, .chart-btn { width:100%; margin-top:15px; padding:12px; font-size:16px; border:none; border-radius:8px; cursor:pointer; }
+    .save-btn { background:#2a7bff; color:white; }
+    .chart-btn { background:#28a745; color:white; }
+
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+    th { background:#444; color:white; }
+
+    .saved-item { padding:10px; border-bottom:1px solid #ddd; cursor:pointer; }
+    #chartContainer { display:none; padding:15px; background:white; margin-top:15px; border-radius:10px; }
+</style>
+</head>
+<body>
+
+<h2>운동 체크 앱</h2>
+
+<div class="container">
+    <input type="date" id="dateInput" />
+
+    <table>
+        <thead>
+            <tr><th>운동</th><th>1set</th><th>2set</th><th>3set</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>보강</td><td><input type="checkbox" data-name="bo1"></td><td><input type="checkbox" data-name="bo2"></td><td><input type="checkbox" data-name="bo3"></td></tr>
+            <tr><td>코어</td><td><input type="checkbox" data-name="core1"></td><td><input type="checkbox" data-name="core2"></td><td><input type="checkbox" data-name="core3"></td></tr>
+            <tr><td>푸쉬업</td><td><input type="checkbox" data-name="push1"></td><td><input type="checkbox" data-name="push2"></td><td><input type="checkbox" data-name="push3"></td></tr>
+            <tr><td>몸통 돌리기</td><td><input type="checkbox" data-name="bat1"></td><td><input type="checkbox" data-name="bat2"></td><td><input type="checkbox" data-name="bat3"></td></tr>
+            <tr><td>악력기</td><td colspan="3">L<input type="checkbox" data-name="gripL"> R<input type="checkbox" data-name="gripR"></td></tr>
+            <tr><td>몸통2</td><td><input type="checkbox" data-name="bat2_1"></td><td><input type="checkbox" data-name="bat2_2"></td><td><input type="checkbox" data-name="bat2_3"></td></tr>
+        </tbody>
+    </table>
+
+    <button id="saveBtn" class="save-btn">💾 저장하기</button>
+</div>
+
+<div class="container">
+    <h3>저장된 날짜</h3>
+    <div id="savedList"></div>
+</div>
+
+<button class="chart-btn" id="chartBtn">📊 그래프 보기</button>
+
+<div id="chartContainer">
+    <h3 id="chartTitle"></h3>
+    <canvas id="myChart"></canvas>
+</div>
+
+<script>
+const dateInput = document.getElementById("dateInput");
+const checkboxes = document.querySelectorAll("input[type=checkbox]");
+const savedList = document.getElementById("savedList");
+let chart = null;
+
+// 오늘 날짜 기본값
+const now = new Date();
+const offset = now.getTimezoneOffset() * 60000;
+dateInput.value = new Date(Date.now() - offset).toISOString().split("T")[0];
+
+loadData(dateInput.value);
+refreshSavedList();
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+    saveData();
+    refreshSavedList();
+    alert("저장되었습니다!");
+});
+
+dateInput.addEventListener("change", () => loadData(dateInput.value));
+
+function saveData() {
+    const key = "exercise_" + dateInput.value;
+    let data = {};
+    checkboxes.forEach(c => data[c.dataset.name] = c.checked);
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+function loadData(date) {
+    checkboxes.forEach(c => c.checked = false);
+    const data = JSON.parse(localStorage.getItem("exercise_" + date) || "{}");
+    for (let key in data) {
+        const cb = document.querySelector(`[data-name="${key}"]`);
+        if (cb) cb.checked = data[key];
+    }
+}
+
+function refreshSavedList() {
+    savedList.innerHTML = "";
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("exercise_")).sort();
+    keys.forEach(k => {
+        const date = k.replace("exercise_", "");
+        const div = document.createElement("div");
+        div.className = "saved-item";
+        div.textContent = date;
+        div.onclick = () => {
+            dateInput.value = date;
+            loadData(date);
+        };
+        savedList.appendChild(div);
+    });
+}
+
+document.getElementById("chartBtn").onclick = () => drawGraph(dateInput.value);
+
+function drawGraph(date) {
+    const raw = localStorage.getItem("exercise_" + date);
+    if (!raw) return alert("저장된 데이터 없음");
+
+    const d = JSON.parse(raw);
+    const labels = ["보강","코어","푸쉬업","몸통1","악력","몸통2"];
+    const values = [
+        (d.bo1?1:0)+(d.bo2?1:0)+(d.bo3?1:0),
+        (d.core1?1:0)+(d.core2?1:0)+(d.core3?1:0),
+        (d.push1?1:0)+(d.push2?1:0)+(d.push3?1:0),
+        (d.bat1?1:0)+(d.bat2?1:0)+(d.bat3?1:0),
+        (d.gripL?1:0)+(d.gripR?1:0),
+        (d.bat2_1?1:0)+(d.bat2_2?1:0)+(d.bat2_3?1:0)
+    ];
+
+    document.getElementById("chartContainer").style.display = "block";
+    document.getElementById("chartTitle").innerText = date + " 운동 그래프";
+
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById("myChart"), {
+        type:"bar",
+        data:{ labels, datasets:[{ label:"세트 완료", data:values, backgroundColor:"#2A7BFF" }] },
+        options:{ scales:{ y:{beginAtZero:true, max:3} } }
+    });
+}
+
+// ---- PWA Service Worker 등록 ----
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js")
+        .then(() => console.log("Service Worker 등록됨"))
+        .catch(err => console.error("Service Worker 등록 실패", err));
+}
+</script>
+</body>
+</html>
