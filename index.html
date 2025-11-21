@@ -16,7 +16,7 @@
 body { 
     font-family:sans-serif; 
     padding:15px; 
-    background:#121212; 
+    background:#000; /* 배경 검정색 */
     color:#e0e0e0; 
 }
 h2, h3 { text-align:center; color:#fff; }
@@ -33,10 +33,10 @@ h2, h3 { text-align:center; color:#fff; }
     padding:10px 15px; font-size:14px; border:none; border-radius:8px; cursor:pointer;
 }
 .save-btn { background:#2a7bff; color:white; width:100%; margin-top:15px; }
-.delete-btn { background:#d9534f; color:white; margin-left:10px; }
-.add-btn { background:#ff9800; color:white; width:100%; margin-top:10px; }
+.delete-btn { background:#d9534f; color:white; }
+.add-btn { background:#ff9800; color:white; }
 
-.date-row { display:flex; align-items:center; }
+.date-row { display:flex; align-items:center; gap:5px; margin-bottom:10px; }
 .date-row input[type="text"] { 
     flex:1; padding:8px; font-size:16px; 
     background:#2c2c2c; color:#e0e0e0; border:1px solid #555; border-radius:5px;
@@ -78,7 +78,7 @@ button:hover { opacity:0.8; }
     justify-content:center; align-items:center;
 }
 .modal {
-    background:#333333;  /* 찐한 회색 */
+    background:#333333;  
     color:white; 
     padding:20px; 
     border-radius:10px; 
@@ -113,6 +113,7 @@ button:hover { opacity:0.8; }
     <div class="date-row">
         <input type="text" id="dateInput" readonly />
         <button class="delete-btn" id="deleteBtn">🗑 삭제</button>
+        <button class="add-btn" id="addExerciseBtn">+ 운동 추가</button>
     </div>
 
     <table id="exerciseTable">
@@ -129,7 +130,6 @@ button:hover { opacity:0.8; }
         </tbody>
     </table>
 
-    <button class="add-btn" id="addExerciseBtn">+ 운동 추가</button>
     <button id="saveBtn" class="save-btn">💾 저장하기</button>
 </div>
 
@@ -137,7 +137,6 @@ button:hover { opacity:0.8; }
     만든 사람 : <strong>Jaeho</strong>
 </footer>
 
-<!-- 커스텀 안내창 -->
 <div id="modalOverlay" class="modal-overlay">
     <div class="modal" id="modalContent">
         <span id="modalMessage"></span><br>
@@ -146,13 +145,11 @@ button:hover { opacity:0.8; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
 <script>
 // -------------------- 모달 --------------------
 const modalOverlay = document.getElementById("modalOverlay");
 const modalMessage = document.getElementById("modalMessage");
 const modalOkBtn = document.getElementById("modalOkBtn");
-
 function showAlert(msg){
     modalMessage.textContent = msg;
     modalOverlay.style.display="flex";
@@ -180,15 +177,20 @@ document.getElementById("addExerciseBtn").onclick = () => {
     if (!name) return;
     const idBase = name.replace(/\s/g, "");
     const row = document.createElement("tr");
-    row.draggable=true; row.className="draggable-row";
-    row.innerHTML=`<td>${name}</td>
+    row.draggable = true;
+    row.className = "draggable-row";
+    row.innerHTML = `
+        <td>${name}</td>
         <td><input type="checkbox" data-name="${idBase}_1"></td>
         <td><input type="checkbox" data-name="${idBase}_2"></td>
         <td><input type="checkbox" data-name="${idBase}_3"></td>
-        <td><button onclick="deleteRow(this)">X</button></td>`;
+        <td><button onclick="deleteRow(this)">X</button></td>
+    `;
     exerciseBody.appendChild(row);
     initDragEvents();
 };
+
+// -------------------- 삭제 --------------------
 function deleteRow(btn){ btn.closest("tr").remove(); }
 
 // -------------------- 저장 --------------------
